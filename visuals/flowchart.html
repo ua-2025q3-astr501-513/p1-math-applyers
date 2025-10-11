@@ -1,0 +1,60 @@
+graph TD
+    A[Start: SOHO Comet Detection] --> B[Data Collection]
+    
+    B --> C[Scrape Sungrazer Catalog]
+    C --> D[Download Position Files]
+    D --> E[Get Observation Times]
+    
+    E --> F{Data Type?}
+    F -->|Comet| G[Download SOHO Images<br/>±3 hours window]
+    F -->|Background| H[Generate Safe Dates<br/>No comet activity]
+    
+    G --> I[498 Comet Sequences]
+    H --> J[167 Background Sequences]
+    
+    I --> K[Preprocessing Pipeline]
+    J --> K
+    
+    K --> L[Load FITS Images]
+    L --> M[Normalize Sizes<br/>1024×1024]
+    M --> N[Frame-to-Frame<br/>Difference Images]
+    N --> O[Maximum Projection<br/>Highlights Motion]
+    
+    O --> P[Dataset Split]
+    P --> Q[Training Set<br/>80% - 532 images]
+    P --> R[Validation Set<br/>20% - 133 images]
+    
+    Q --> S[EfficientNet-B0 Training]
+    R --> S
+    
+    S --> T[Data Augmentation<br/>Flips, Rotations]
+    T --> U[30 Epochs<br/>Adam Optimizer]
+    U --> V[ReduceLROnPlateau<br/>Scheduler]
+    
+    V --> W[Model Evaluation]
+    W --> X{Validation<br/>Accuracy?}
+    
+    X -->|< 95%| Y[Adjust Hyperparameters]
+    Y --> S
+    
+    X -->|≥ 97.7%| Z[Save Best Model]
+    
+    Z --> AA[Deployment]
+    AA --> AB[Gradio Web App]
+    AB --> AC[HuggingFace Spaces]
+    
+    AC --> AD[End: Production System<br/>97.7% Accuracy]
+    
+    style A fill:#e1f5fe
+    style AD fill:#c8e6c9
+    style S fill:#fff9c4
+    style Z fill:#f8bbd0
+    style O fill:#ffccbc
+    
+    classDef dataClass fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef modelClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef resultClass fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    
+    class I,J,Q,R dataClass
+    class S,T,U,V modelClass
+    class Z,AD resultClass
