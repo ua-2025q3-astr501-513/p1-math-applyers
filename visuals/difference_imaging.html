@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Difference Imaging - How It Works</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f35 100%);
+            color: white;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .demo-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .canvas-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            text-align: center;
+        }
+        .canvas-title {
+            font-size: 1.3em;
+            color: #00d9ff;
+            margin-bottom: 15px;
+        }
+        canvas {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        }
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        button {
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            border: none;
+            color: #000;
+            padding: 15px 30px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        input[type="range"] {
+            width: 300px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            outline: none;
+        }
+        .explanation {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            margin-bottom: 20px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 10px;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #000;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .formula {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            border-left: 4px solid #00d9ff;
+        }
+        @media (max-width: 1024px) {
+            .demo-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 Difference Imaging Technique</h1>
+        <div class="subtitle">How COMET-SEE Detects Moving Objects</div>
+
+        <div class="demo-container">
+            <div class="canvas-container">
+                <div class="canvas-title">Frame 1</div>
+                <canvas id="frame1" width="400" height="400"></canvas>
+            </div>
+            <div class="canvas-container">
+                <div class="canvas-title">Frame 2</div>
+                <canvas id="frame2" width="400" height="400"></canvas>
+            </div>
+            <div class="canvas-container">
+                <div class="canvas-title">Difference Image</div>
+                <canvas id="difference" width="400" height="400"></canvas>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="animateComet()">▶️ Animate Comet</button>
+            <button onclick="reset()">🔄 Reset</button>
+            <button onclick="toggleStars()">⭐ Toggle Stars</button>
+            <div class="slider-container">
+                <label for="cometSpeed">Comet Speed:</label>
+                <input type="range" id="cometSpeed" min="1" max="20" value="5" oninput="updateSpeed(this.value)">
+                <span id="speedValue">5</span>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h2 style="color: #00d9ff; margin-bottom: 20px;">How Difference Imaging Works</h2>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div>
+                    <strong>Capture Sequential Images:</strong> Take multiple frames of the same field of view over time. The background (stars, corona) remains static while the comet moves.
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div>
+                    <strong>Subtract Consecutive Frames:</strong> For each pair of images, subtract the previous frame from the current frame.
+                    <div class="formula">D<sub>i</sub> = I<sub>i+1</sub> - I<sub>i</sub></div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div>
+                    <strong>Result Analysis:</strong>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li>Static objects → ~0 (cancel out)</li>
+                        <li>Moving comet → positive/negative values</li>
+                        <li>New position = bright, old position = dark</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div>
+                    <strong>Maximum Projection:</strong> Take the absolute maximum across all difference images to reveal the complete comet trail.
+                    <div class="formula">M(x,y) = max{|D<sub>1</sub>(x,y)|, |D<sub>2</sub>(x,y)|, ..., |D<sub>n</sub>(x,y)|}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h2 style="color: #00d9ff; margin-bottom: 20px;">Why This Works for Comets</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3 style="color: #00ff88; margin-bottom: 10px;">✅ Advantages</h3>
+                    <ul style="line-height: 2;">
+                        <li>Removes static background clutter</li>
+                        <li>Enhances faint moving objects</li>
+                        <li>Works in noisy conditions</li>
+                        <li>Computationally efficient</li>
+                        <li>Reveals motion patterns clearly</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #ffb366; margin-bottom: 10px;">⚠️ Challenges</h3>
+                    <ul style="line-height: 2;">
+                        <li>Cosmic ray hits create artifacts</li>
+                        <li>Planets also show motion</li>
+                        <li>Brightness changes affect results</li>
+                        <li>Requires multiple aligned images</li>
+                        <li>Very slow comets may be missed</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas1 = document.getElementById('frame1');
+        const canvas2 = document.getElementById('frame2');
+        const canvasDiff = document.getElementById('difference');
+        const ctx1 = canvas1.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
+        const ctxDiff = canvasDiff.getContext('2d');
+
+        let cometX = 100;
+        let cometY = 100;
+        let cometSpeed = 5;
+        let animating = false;
+        let showStars = true;
+        let stars = [];
+
+        // Generate random stars
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * 400,
+                y: Math.random() * 400,
+                size: Math.random() * 2 + 0.5,
+                brightness: Math.random() * 150 + 50
+            });
+        }
+
+        function drawStars(ctx) {
+            if (!showStars) return;
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness / 255})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawComet(ctx, x, y) {
+            // Comet nucleus
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 15);
+            gradient.addColorStop(0, 'rgba(255, 255, 200, 1)');
+            gradient.addColorStop(0.5, 'rgba(200, 200, 255, 0.6)');
+            gradient.addColorStop(1, 'rgba(100, 100, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tail
+            const tailGradient = ctx.createLinearGradient(x, y, x - 40, y - 40);
+            tailGradient.addColorStop(0, 'rgba(200, 200, 255, 0.6)');
+            tailGradient.addColorStop(1, 'rgba(100, 100, 200, 0)');
+            
+            ctx.fillStyle = tailGradient;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 35, y - 25);
+            ctx.lineTo(x - 25, y - 35);
+            ctx.fill();
+        }
+
+        function drawFrame1() {
+            ctx1.fillStyle = '#000';
+            ctx1.fillRect(0, 0, 400, 400);
+            drawStars(ctx1);
+            drawComet(ctx1, cometX, cometY);
+        }
+
+        function drawFrame2() {
+            ctx2.fillStyle = '#000';
+            ctx2.fillRect(0, 0, 400, 400);
+            drawStars(ctx2);
+            drawComet(ctx2, cometX + cometSpeed * 10, cometY + cometSpeed * 10);
+        }
+
+        function drawDifference() {
+            // Get image data
+            const imageData1 = ctx1.getImageData(0, 0, 400, 400);
+            const imageData2 = ctx2.getImageData(0, 0, 400, 400);
+            const diffData = ctxDiff.createImageData(400, 400);
+
+            // Calculate difference
+            for (let i = 0; i < imageData1.data.length; i += 4) {
+                const diff = Math.abs(imageData2.data[i] - imageData1.data[i]);
+                
+                // Color coding: bright = high difference
+                diffData.data[i] = diff * 2;     // Red
+                diffData.data[i + 1] = diff;     // Green
+                diffData.data[i + 2] = diff * 3; // Blue
+                diffData.data[i + 3] = 255;      // Alpha
+            }
+
+            ctxDiff.fillStyle = '#000';
+            ctxDiff.fillRect(0, 0, 400, 400);
+            ctxDiff.putImageData(diffData, 0, 0);
+        }
+
+        function updateSpeed(value) {
+            cometSpeed = parseInt(value);
+            document.getElementById('speedValue').textContent = value;
+            if (!animating) {
+                drawFrame2();
+                drawDifference();
+            }
+        }
+
+        function animateComet() {
+            if (animating) return;
+            animating = true;
+            cometX = 100;
+            cometY = 100;
+
+            const interval = setInterval(() => {
+                cometX += cometSpeed;
+                cometY += cometSpeed;
+
+                drawFrame1();
+                drawFrame2();
+                drawDifference();
+
+                if (cometX > 300 || cometY > 300) {
+                    clearInterval(interval);
+                    animating = false;
+                }
+            }, 100);
+        }
+
+        function reset() {
+            cometX = 100;
+            cometY = 100;
+            animating = false;
+            drawFrame1();
+            drawFrame2();
+            drawDifference();
+        }
+
+        function toggleStars() {
+            showStars = !showStars;
+            drawFrame1();
+            drawFrame2();
+            drawDifference();
+        }
+
+        // Initial draw
+        drawFrame1();
+        drawFrame2();
+        drawDifference();
+    </script>
+</body>
+</html>
