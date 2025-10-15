@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D EfficientNet-B0 Architecture</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f35 100%);
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00d9ff;
+            max-width: 350px;
+        }
+        #info h2 {
+            margin: 0 0 10px 0;
+            color: #00d9ff;
+            font-size: 1.4em;
+        }
+        #layer-name {
+            font-size: 1.2em;
+            color: #00ff88;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .stat {
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        .label {
+            color: #888;
+            display: inline-block;
+            width: 120px;
+        }
+        .value {
+            color: #fff;
+            font-weight: bold;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00d9ff;
+        }
+        button {
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        #legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00d9ff;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        #title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeIn 2s forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        .title-text {
+            font-size: 3em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    
+    <div id="info">
+        <h2>Layer Information</h2>
+        <div id="layer-name">Input Layer</div>
+        <div class="stat">
+            <span class="label">Dimensions:</span>
+            <span class="value" id="dimensions">512×512×3</span>
+        </div>
+        <div class="stat">
+            <span class="label">Channels:</span>
+            <span class="value" id="channels">3</span>
+        </div>
+        <div class="stat">
+            <span class="label">Parameters:</span>
+            <span class="value" id="params">0</span>
+        </div>
+        <div class="stat">
+            <span class="label">Type:</span>
+            <span class="value" id="type">Input</span>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button onclick="autoRotate()">Auto Rotate</button>
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="nextLayer()">Next Layer →</button>
+    </div>
+
+    <div id="legend">
+        <h3 style="margin: 0 0 10px 0; color: #00d9ff;">Layer Types</h3>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #4fc3f7;"></div>
+            <span>Convolution</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ba68c8;"></div>
+            <span>MBConv Block</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #81c784;"></div>
+            <span>Pooling</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffb74d;"></div>
+            <span>Dense/Output</span>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let layers = [];
+        let currentLayer = 0;
+        let rotating = false;
+
+        // EfficientNet-B0 Architecture Definition
+        const architecture = [
+            { name: 'Input', width: 512, height: 512, depth: 3, color: 0x4fc3f7, params: 0, type: 'Input' },
+            { name: 'Conv3x3', width: 256, height: 256, depth: 32, color: 0x4fc3f7, params: 864, type: 'Conv2D' },
+            { name: 'MBConv1', width: 256, height: 256, depth: 16, color: 0xba68c8, params: 1392, type: 'MBConv' },
+            { name: 'MBConv2', width: 128, height: 128, depth: 24, color: 0xba68c8, params: 6912, type: 'MBConv' },
+            { name: 'MBConv3', width: 64, height: 64, depth: 40, color: 0xba68c8, params: 15360, type: 'MBConv' },
+            { name: 'MBConv4', width: 32, height: 32, depth: 80, color: 0xba68c8, params: 31920, type: 'MBConv' },
+            { name: 'MBConv5', width: 16, height: 16, depth: 112, color: 0xba68c8, params: 54624, type: 'MBConv' },
+            { name: 'MBConv6', width: 16, height: 16, depth: 192, color: 0xba68c8, params: 118560, type: 'MBConv' },
+            { name: 'MBConv7', width: 8, height: 8, depth: 320, color: 0xba68c8, params: 193472, type: 'MBConv' },
+            { name: 'Conv1x1', width: 8, height: 8, depth: 1280, color: 0x4fc3f7, params: 409600, type: 'Conv2D' },
+            { name: 'Global Pool', width: 1, height: 1, depth: 1280, color: 0x81c784, params: 0, type: 'Pooling' },
+            { name: 'FC Output', width: 1, height: 1, depth: 2, color: 0xffb74d, params: 2562, type: 'Dense' }
+        ];
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0a0e27, 50, 200);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(30, 20, 50);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0a0e27, 1);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const pointLight1 = new THREE.PointLight(0x00d9ff, 1, 100);
+            pointLight1.position.set(20, 20, 20);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x00ff88, 0.8, 100);
+            pointLight2.position.set(-20, 10, -20);
+            scene.add(pointLight2);
+
+            // Create architecture visualization
+            createArchitecture();
+
+            // Mouse controls
+            let mouseDown = false;
+            let mouseX = 0, mouseY = 0;
+
+            document.addEventListener('mousedown', (e) => { mouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
+            document.addEventListener('mouseup', () => { mouseDown = false; });
+            document.addEventListener('mousemove', (e) => {
+                if (mouseDown && !rotating) {
+                    const deltaX = e.clientX - mouseX;
+                    const deltaY = e.clientY - mouseY;
+                    camera.position.x += deltaX * 0.1;
+                    camera.position.y -= deltaY * 0.1;
+                    camera.lookAt(0, 0, 0);
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                }
+            });
+
+            // Raycasting for interaction
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            window.addEventListener('click', (event) => {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(layers);
+
+                if (intersects.length > 0) {
+                    const index = layers.indexOf(intersects[0].object);
+                    if (index !== -1) {
+                        highlightLayer(index);
+                    }
+                }
+            });
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            animate();
+        }
+
+        function createArchitecture() {
+            let xOffset = -40;
+
+            architecture.forEach((layer, index) => {
+                // Scale dimensions for visualization
+                const w = Math.max(layer.width / 100, 0.5);
+                const h = Math.max(layer.height / 100, 0.5);
+                const d = Math.max(layer.depth / 20, 0.3);
+
+                const geometry = new THREE.BoxGeometry(w, h, d);
+                const material = new THREE.MeshPhongMaterial({
+                    color: layer.color,
+                    transparent: true,
+                    opacity: 0.8,
+                    emissive: layer.color,
+                    emissiveIntensity: 0.2
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.x = xOffset;
+                mesh.userData = { index, layer };
+                
+                scene.add(mesh);
+                layers.push(mesh);
+
+                // Add edge outline
+                const edges = new THREE.EdgesGeometry(geometry);
+                const line = new THREE.LineSegments(
+                    edges,
+                    new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true })
+                );
+                line.position.copy(mesh.position);
+                scene.add(line);
+
+                // Add connecting lines
+                if (index > 0) {
+                    const points = [
+                        new THREE.Vector3(xOffset - w/2, 0, 0),
+                        new THREE.Vector3(xOffset - 3, 0, 0)
+                    ];
+                    const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const lineMaterial = new THREE.LineBasicMaterial({
+                        color: 0x00d9ff,
+                        opacity: 0.6,
+                        transparent: true
+                    });
+                    const connection = new THREE.Line(lineGeometry, lineMaterial);
+                    scene.add(connection);
+                }
+
+                xOffset += w + 3;
+            });
+
+            highlightLayer(0);
+        }
+
+        function highlightLayer(index) {
+            currentLayer = index;
+
+            // Reset all layers
+            layers.forEach((layer, i) => {
+                layer.material.emissiveIntensity = 0.2;
+                layer.material.opacity = i === index ? 1 : 0.5;
+            });
+
+            // Highlight selected
+            layers[index].material.emissiveIntensity = 0.5;
+
+            // Update info
+            const layer = architecture[index];
+            document.getElementById('layer-name').textContent = layer.name;
+            document.getElementById('dimensions').textContent = `${layer.width}×${layer.height}×${layer.depth}`;
+            document.getElementById('channels').textContent = layer.depth;
+            document.getElementById('params').textContent = layer.params.toLocaleString();
+            document.getElementById('type').textContent = layer.type;
+
+            // Smooth camera move
+            const targetPos = layers[index].position.clone();
+            targetPos.z += 15;
+            targetPos.y += 5;
+            
+            animateCamera(camera.position, targetPos, 1000);
+        }
+
+        function animateCamera(from, to, duration) {
+            const start = Date.now();
+            const initialPos = from.clone();
+
+            function update() {
+                const now = Date.now();
+                const progress = Math.min((now - start) / duration, 1);
+                
+                from.lerpVectors(initialPos, to, easeInOutCubic(progress));
+                camera.lookAt(0, 0, 0);
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            update();
+        }
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function autoRotate() {
+            rotating = !rotating;
+        }
+
+        function resetView() {
+            rotating = false;
+            camera.position.set(30, 20, 50);
+            camera.lookAt(0, 0, 0);
+            highlightLayer(0);
+        }
+
+        function nextLayer() {
+            currentLayer = (currentLayer + 1) % architecture.length;
+            highlightLayer(currentLayer);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (rotating) {
+                const time = Date.now() * 0.0005;
+                camera.position.x = Math.cos(time) * 50;
+                camera.position.z = Math.sin(time) * 50;
+                camera.lookAt(0, 0, 0);
+            }
+
+            // Pulse effect on highlighted layer
+            const pulse = Math.sin(Date.now() * 0.003) * 0.1 + 0.9;
+            layers[currentLayer].scale.set(pulse, pulse, pulse);
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+    </script>
+</body>
+</html>

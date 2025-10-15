@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+myenv/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Data Files
+data/raw/*
+data/processed/*
+!data/raw/README.md
+!data/processed/README.md
+*.fts
+*.fits
+*.npy
+*.csv
+
+# Model Files
+models/*.pth
+models/*.pt
+*.h5
+*.pkl
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# HuggingFace
+deployment/.huggingface/
+
+# Google Colab
+.config/
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
